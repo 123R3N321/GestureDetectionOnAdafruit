@@ -1,0 +1,120 @@
+// #include <Arduino.h>
+// #include <SPI.h>
+// #include <Wire.h>
+
+// #define CPLAY_LIS3DH_CS 8         ///< LIS3DH chip select pin
+// #define CPLAY_LIS3DH_INTERRUPT 7  ///< LIS3DH interrupt pin
+// #define CPLAY_LIS3DH_ADDRESS 0x18 ///< LIS3DH I2C address
+
+//todo: above code is all stl used to create following functionality
+
+#include <Arduino.h>
+#include <Adafruit_CircuitPlayground.h>
+
+//unit: meters per second squared
+volatile float X, Y, Z; //3-dimensional data
+volatile float Total; //condensed 1 dimensional data for caliberation
+
+//below are large amounts of raw data for "man-powered machine learning"
+volatile float rawDataX[100] = {0};  //initialize data set of 100 measurements of X, Y and Z
+volatile float rawDataY[100] = {0};  
+volatile float rawDataZ[100] = {0};  
+class stats{
+  public:
+  float posMax;
+  float negMax;
+  float Mean;
+};  //to do: class definition unfinished!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+
+void setup() {
+  Serial.begin(9600); //basically always this freq
+
+  CircuitPlayground.begin();  //todo: need to get rid of this need of lib
+  CircuitPlayground.setAccelRange(LIS3DH_RANGE_4_G);  //max detect 4G, prof does not like high range anyways
+                                    //candidate vals:
+                                      //2, 4, 8 and 16G
+}
+
+void reset(){ //clear acceleration reading
+  X = 0; 
+  Y = 0;
+  Z = 0;
+}
+
+void measure3D(int filter){ //3 dimentional measurement
+for (int i=0; i<filter; i++) {  
+    X += CircuitPlayground.motionX() / filter;
+    Y += CircuitPlayground.motionY() / filter;
+    Z += CircuitPlayground.motionZ() / filter;
+    delay(1); //max resolution
+  }
+}
+
+char orient(int filter){  //only detect current board orientation for stationary situation, prints always
+for (int i=0; i<filter; i++) {  
+    X += CircuitPlayground.motionX() / filter;
+    Y += CircuitPlayground.motionY() / filter;
+    Z += CircuitPlayground.motionZ() / filter;
+    delay(1); //max resolution
+  }
+  return (X == max(max(X, Y), Z)) ? 'X' : (Y == max(max(X, Y), Z)) ? 'Y' : 'Z';
+
+}
+
+
+void rawMeasure(){  //measure and print three dim on one line
+
+  //measure 
+  for (int i=0; i<100; i++) {  
+    rawDataX[i] = CircuitPlayground.motionX();
+    rawDataY[i] = CircuitPlayground.motionY();
+    rawDataZ[i] = CircuitPlayground.motionZ();
+    delay(1); //max resolution
+  }
+
+  //print
+      Serial.print("X: ");
+  for (int i=0; i<100; i++) {  
+    Serial.print(rawDataX[i]);
+    Serial.print("  ");
+  }
+
+  delay(1000);
+
+}
+
+
+void detectOrientChange(){  //only prints out one letter when orientation changes
+    static char prevOrient = ' ';  //a random initial state of non x y z
+  char currOrient = orient(16);
+  if(currOrient != prevOrient){
+    Serial.println(currOrient);
+    delay(100);
+  }
+  prevOrient = currOrient;
+}
+
+
+void loop() {
+  // detectOrientChange();
+
+// rawMeasure();  
+
+  reset();  //is needed to clear the 3-dimensional data
+  measure3D(8);
+  Serial.print(X);
+  Serial.print("  ");
+  Serial.print(Y);
+  Serial.print("  ");
+  Serial.print(Z);
+  Serial.print("  ");
+  Serial.println();
+
+  // Total = sqrt(X*X + Y*Y + Z*Z);  //one dimential magnitude data, used for caliberation
+
+  // Serial.println(Total);
+  // Serial.println(orient(16));
+
+  delay(500);
+}
