@@ -3,16 +3,17 @@
 #include <Arduino.h>
 #include <Adafruit_CircuitPlayground.h>
 
-int brightVal = 10;
+int brightVal = 3;
+int PixelVal = -1;
 
 //unit: meters per second squared
 volatile float X, Y, Z; //3-dimensional data
 int red = 0;  int green = 0;  int blue = 0;
 
 // //below are large amounts of raw data for "man-powered machine learning"
-float rawDataX[10] = {0};  //initialize data set of 10 measurements of X, Y and Z
-float rawDataY[10] = {0};  
-float rawDataZ[10] = {0};  
+float rawDataX[16] = {0};  //initialize data set of 10 measurements of X, Y and Z
+float rawDataY[16] = {0};  
+float rawDataZ[16] = {0};  
   
 
 void reset(){ //clear acceleration reading
@@ -42,14 +43,14 @@ for (int i=0; i<filter; i++) {
 
 float filterData(float data, float arr[10]){
 float avg = 0;
-    for(int i=0; i<10; i++){
+    for(int i=0; i<16; i++){
       avg += arr[i];
       arr[i-1] = arr[i];
     }
     avg += data;
-    avg/=10;
+    avg/=16;
 
-    arr[9] = data;
+    arr[15] = data;
     return avg;
 }
 
@@ -106,11 +107,13 @@ int tiltPixel(float x, float y, float z){ //here use wasd as directions
   if(abs(x)>3 || abs(y)>3){ //only when fruit not laying flat
     if(x<0 && abs(y)<3){  //tilted s
       Serial.print("down  ");
+      PixelVal=0;
       if(y<-0.8){
       Serial.print("right ");
       }
       if(y>0.8){
         Serial.print("left  ");
+
       }
       Serial.println();
     }
@@ -118,17 +121,22 @@ int tiltPixel(float x, float y, float z){ //here use wasd as directions
 
     if(y<0 && abs(x)<3){  //tilted d
       Serial.println("right");
+                            PixelVal=2;
+
 
     }
 
 
     if(x>0 && abs(y)<3){  //tilted w
       Serial.print("up  ");
+            PixelVal=4;
+
       if(y<-0.8){
       Serial.print("right ");
       }
       if(y>0.8){
         Serial.print("left  ");
+
       }
       Serial.println();
     }
@@ -136,11 +144,14 @@ int tiltPixel(float x, float y, float z){ //here use wasd as directions
 
     if(y>0 && abs(x)<3){  //tilted a
       Serial.println("left");
+                            PixelVal=7;
+
     }
     return 1;
   }
   if(z>0){
   Serial.println("flat");
+  PixelVal=-1;
   }else{
   Serial.println("flipped flat");
   }
@@ -177,12 +188,20 @@ void loop() {
   tiltPixel(X,Y,Z);
 
 
-  // red = map(X,0,10,0,255);
-  // green = map(Y,0,10,0,255);
-  // blue = map(Z,0,10,0,255);
+  red = map(X,0,10,0,255);
+  green = map(Y,0,10,0,255);
+  blue = map(Z,0,10,0,255);
 
-  for (int i=0; i<10; ++i) {
-    CircuitPlayground.setPixelColor(i, red, green, blue);
-  }
+  // for (int i=0; i<10; ++i) {
+  //   CircuitPlayground.setPixelColor(i, red, green, blue);
+  // }
+
+    if(PixelVal==-1){
+    CircuitPlayground.clearPixels();
+    }else{
+    CircuitPlayground.setPixelColor(PixelVal, red, green, blue);
+    }
+
+
   delay(1);   
 }
